@@ -5,5 +5,20 @@
     "port": "1080",
     "user": "dzm-tgproxy",
     "password": "tgproxy"
+  },
+  "modelFileName": "C:/Workspace/go/src/email_parser/model.js",
+  "alarmLogic": {
+    "normalQueues": {
+      "APPOINTMENT": 100,
+      "AR_SCHEDULE_UPDATED": 100,
+      "SELF_APPOINTMENT": 100,
+      "UNMET_DEMAND": 5
+    },
+    "exceptionQueues": {
+      "APPOINTMENT": 10,
+      "AR_SCHEDULE_UPDATED": 500,
+      "SELF_APPOINTMENT": 10,
+      "UNMET_DEMAND": 5
+    }
   }
 }

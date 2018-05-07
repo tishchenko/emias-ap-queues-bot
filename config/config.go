@@ -8,8 +8,10 @@ import (
 const defConfigFileName = "config.json"
 
 type Config struct {
-	TelApiToken string `json:"token"`
-	Proxy       *Proxy `json:"proxy,omitempty"`
+	TelApiToken   string            `json:"token"`
+	Proxy         *Proxy            `json:"proxy,omitempty"`
+	ModelFileName string            `json:"modelFileName"`
+	AlarmLogic    *QueuesAlarmLogic `json:"alarmLogic,omitempty"`
 }
 
 type Proxy struct {
@@ -17,6 +19,11 @@ type Proxy struct {
 	Port     string `json:"port"`
 	User     string `json:"user"`
 	Password string `json:"password"`
+}
+
+type QueuesAlarmLogic struct {
+	NormalQueues    *map[string]int `json:"normalQueues"`
+	ExceptionQueues *map[string]int `json:"exceptionQueues"`
 }
 
 func NewConfig() *Config {

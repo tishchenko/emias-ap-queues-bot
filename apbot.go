@@ -9,11 +9,13 @@ import (
 	"context"
 	"github.com/tishchenko/emias-ap-queues-bot/config"
 	"time"
+	"github.com/tishchenko/emias-ap-queues-bot/model"
 )
 
 type ApBot struct {
 	Bot   *tgbotapi.BotAPI
 	Chats map[int64]int64
+	Model *model.Model
 }
 
 func NewApBot(conf *config.Config) *ApBot {
@@ -43,6 +45,8 @@ func NewApBot(conf *config.Config) *ApBot {
 		client = &http.Client{}
 	}
 
+	bot.Model = model.NewModelWithFileName(conf.ModelFileName)
+
 	bot.Bot, err = tgbotapi.NewBotAPIWithClient(conf.TelApiToken, client)
 	if err != nil {
 		log.Panic(err)
@@ -57,9 +61,9 @@ func NewApBot(conf *config.Config) *ApBot {
 
 func (bot *ApBot) Run() {
 
-	c := make(chan int64)
-	go bot.readQueuesStatFile(c)
-	go bot.sendMessage(c)
+	m := make(chan string)
+	go bot.readQueuesStatFile(m)
+	go bot.sendMessage(m)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -78,20 +82,22 @@ func (bot *ApBot) Run() {
 	}
 }
 
-func (bot *ApBot) sendMessage(c chan int64) {
+func (bot *ApBot) sendMessage(m chan string) {
 	for {
-		chatID := <-c
-		msg := tgbotapi.NewMessage(chatID, "+")
-		bot.Bot.Send(msg)
+		message := <-m
+		for chatID := range bot.Chats {
+			msg := tgbotapi.NewMessage(chatID, message)
+			bot.Bot.Send(msg)
+		}
+
 		print("+")
 	}
 }
 
-func (bot *ApBot) readQueuesStatFile(c chan int64) {
+func (bot *ApBot) readQueuesStatFile(m chan string) {
 	for {
-		for chatID := range bot.Chats {
-			c <- chatID
-		}
+		bot.Model.Refresh()
+		m <- bot.Model.FileName
 		time.Sleep(time.Second)
 	}
 }
