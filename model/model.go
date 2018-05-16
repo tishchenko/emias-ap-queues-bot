@@ -20,7 +20,7 @@ type Model struct {
 
 type QueueInfo struct {
 	DateTime       time.Time `json:"dateTime"`
-	Length         *uint32 `json:"length"`
+	Length         *int `json:"length"`
 }
 
 func NewModel() *Model {

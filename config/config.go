@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 )
 
-const defConfigFileName = "config.json"
+const (
+	defConfigFileName = "config.json"
+	defPollInterval = 60 // sec
+)
 
 type Config struct {
 	TelApiToken   string            `json:"token"`
@@ -24,6 +27,7 @@ type Proxy struct {
 type QueuesAlarmLogic struct {
 	NormalQueues    *map[string]int `json:"normalQueues"`
 	ExceptionQueues *map[string]int `json:"exceptionQueues"`
+	PollInterval    uint32          `json:"pollInterval"`
 }
 
 func NewConfig() *Config {
@@ -48,5 +52,10 @@ func NewConfigWithCustomFile(fileName string) *Config {
 	if err != nil {
 		return c
 	}
+
+	if c.AlarmLogic != nil && c.AlarmLogic.PollInterval < 1 {
+		c.AlarmLogic.PollInterval = defPollInterval
+	}
+
 	return c
 }
