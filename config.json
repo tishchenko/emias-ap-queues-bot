@@ -9,17 +9,17 @@
   "modelFileName": "C:/Workspace/go/src/github.com/tishchenko/emias-ap-queues-bot/m.js",
   "alarmLogic": {
     "normalQueues": {
-      "APPOINTMENT": 5,
-      "AR_SCHEDULE_UPDATED": 5,
-      "SELF_APPOINTMENT": 5,
-      "UNMET_DEMAND": 5
+      "APPOINTMENT": 969,
+      "AR_SCHEDULE_UPDATED": 969,
+      "SELF_APPOINTMENT": 969,
+      "UNMET_DEMAND": 969
     },
     "exceptionQueues": {
-      "APPOINTMENT": 1,
-      "AR_SCHEDULE_UPDATED": 1,
-      "SELF_APPOINTMENT": 1,
-      "UNMET_DEMAND": 1
+      "APPOINTMENT": 69,
+      "AR_SCHEDULE_UPDATED": 96,
+      "SELF_APPOINTMENT": 69,
+      "UNMET_DEMAND": 69
     },
-    "pollInterval": 600
+    "pollInterval": 3600
   }
 }

@@ -162,7 +162,7 @@ func (bot *ApBot) generateStatMessage(mesData []QMesData) string {
 	var mes string
 
 	for _, m := range mesData {
-		mes += "Очередь " +
+		mes += "\xF0\x9F\x9A\xA8 Очередь " +
 			m.Type +
 			" <b>" +
 			m.Name +
@@ -172,7 +172,7 @@ func (bot *ApBot) generateStatMessage(mesData []QMesData) string {
 			m.From.Format("2006-01-02 15:04") +
 			"</b> по <b>" +
 			m.To.Format("2006-01-02 15:04") +
-			"</b>\n"
+			"</b>\n\n"
 	}
 
 	return mes
