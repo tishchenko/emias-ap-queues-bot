@@ -12,12 +12,14 @@ import (
 	"time"
 	"sort"
 	"strconv"
+	"encoding/json"
+	"strings"
 )
 
 type ApBot struct {
-	Bot   *tgbotapi.BotAPI
-	Chats map[int64]int64
-	Model *model.Model
+	Bot        *tgbotapi.BotAPI
+	Chats      map[int64]int64
+	Model      *model.Model
 	AlarmLogic config.QueuesAlarmLogic
 }
 
@@ -28,6 +30,9 @@ type QMesData struct {
 	To    time.Time
 	Delta int
 }
+
+var queueNames = []string{"APPOINTMENT", "SELF_APPOINTMENT", "UNMET_DEMAND", "AR_SCHEDULE_UPDATED"}
+var queueTypes = []string{"", "EQ"}
 
 func NewApBot(conf *config.Config) *ApBot {
 	bot := &ApBot{}
@@ -76,7 +81,7 @@ func (bot *ApBot) Run() {
 
 	m := make(chan string)
 	go bot.poll(m)
-	go bot.sendMessage(m)
+	go bot.sendBroadcastMessage(m)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -84,28 +89,53 @@ func (bot *ApBot) Run() {
 	updates, _ := bot.Bot.GetUpdatesChan(u)
 
 	for update := range updates {
-
-		if update.Message.Command() == "start" {
-			bot.Chats[update.Message.Chat.ID] = update.Message.Chat.ID
+		if update.Message == nil {
+			continue
 		}
-		if update.Message.Command() == "stop" {
-			delete(bot.Chats, update.Message.Chat.ID);
+
+		if update.Message.IsCommand() {
+
+			switch update.Message.Command() {
+			case "start":
+				bot.Chats[update.Message.Chat.ID] = update.Message.Chat.ID
+				bot.sendMessage(update.Message.Chat.ID, "Привет, "+update.Message.From.FirstName+" \xE2\x9C\x8C")
+			case "stop":
+				delete(bot.Chats, update.Message.Chat.ID)
+				bot.sendMessage(update.Message.Chat.ID, "Ну, ты это, зови если что...")
+				bot.sendMessage(update.Message.Chat.ID, "\xF0\x9F\x92\xA4")
+			case "help":
+				help := "Доступны команды:\n" +
+					"/health - проверка бота на работоспособность\n" +
+					"/queue (queueName [queueType]) - вывод статистики по очереди queueName (<b>" + strings.Join(queueNames, ", ") + "</b>) за последнее время; queueType - если не задан, то выводится статистика по normal queue, если <b>EQ</b>, то выводится статистика по exception queue\n" +
+					"/rules - выводит правила оповещения, указанные в настройках"
+				bot.sendMessage(update.Message.Chat.ID, help)
+			case "health":
+				bot.sendMessage(update.Message.Chat.ID, "Я \xE2\x9D\xA4 тебя!")
+			case "queue":
+				bot.printQueueStat(update.Message.Chat.ID, update.Message.CommandArguments())
+			case "rules":
+				bot.printRules(update.Message.Chat.ID)
+			}
 		}
 
 	}
 }
 
-func (bot *ApBot) sendMessage(m chan string) {
+func (bot *ApBot) sendBroadcastMessage(m chan string) {
 	for {
 		message := <-m
 		for chatID := range bot.Chats {
-			msg := tgbotapi.NewMessage(chatID, message)
-			msg.ParseMode = tgbotapi.ModeHTML
-			bot.Bot.Send(msg)
+			bot.sendMessage(chatID, message)
 		}
 
 		print("+")
 	}
+}
+
+func (bot *ApBot) sendMessage(chatID int64, message string) {
+	msg := tgbotapi.NewMessage(chatID, message)
+	msg.ParseMode = tgbotapi.ModeHTML
+	bot.Bot.Send(msg)
 }
 
 func (bot *ApBot) poll(m chan string) {
@@ -176,4 +206,36 @@ func (bot *ApBot) generateStatMessage(mesData []QMesData) string {
 	}
 
 	return mes
+}
+
+func (bot *ApBot) printQueueStat(chatID int64, queueName string) {
+	s := strings.Split(queueName, " ")
+	if len(s) < 1 {
+		bot.sendMessage(chatID, "Укажи название очереди. Варианты: <b>" + strings.Join(queueNames, ", ") + "</b>")
+		return
+	}
+	if !stringInSlice(s[0], queueNames) {
+		bot.sendMessage(chatID, "Не знаю такой очереди! Только <b>" + strings.Join(queueNames, ", ") + "</b>")
+		return
+	}
+	if len(s) > 1 && !stringInSlice(s[1], queueTypes)  {
+		bot.sendMessage(chatID, "Не знаю такого типа очереди! Знаю только <b>EQ</b>")
+		return
+	}
+
+
+}
+
+func (bot *ApBot) printRules(chatID int64) {
+	rules, _ := json.Marshal(bot.AlarmLogic)
+	bot.sendMessage(chatID, string(rules))
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
