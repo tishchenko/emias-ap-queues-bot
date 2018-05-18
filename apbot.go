@@ -102,7 +102,7 @@ func (bot *ApBot) Run() {
 			switch update.Message.Command() {
 			case "start":
 				bot.Chats[update.Message.Chat.ID] = update.Message.Chat.ID
-				bot.sendMessage(update.Message.Chat.ID, "Привет, "+update.Message.From.FirstName+" \xE2\x9C\x8C")
+				bot.sendMessage(update.Message.Chat.ID, "Привет, "+update.Message.From.FirstName+" \xE2\x9C\x8C\n Мониторинг запущен.")
 			case "stop":
 				delete(bot.Chats, update.Message.Chat.ID)
 				bot.sendMessage(update.Message.Chat.ID, "Ну, ты это, зови если что...")
@@ -116,7 +116,7 @@ func (bot *ApBot) Run() {
 					//"/rules - выводит правила оповещения, указанные в настройках"
 				bot.sendMessage(update.Message.Chat.ID, help)
 			case "health":
-				bot.sendMessage(update.Message.Chat.ID, "Я ❤ тебя!\nВсегда ваш <i>ApAggregateQueuesBot версии "+version+"</i>\n-=[ 🤖 ]=-")
+				bot.printHealth(update.Message.Chat.ID)
 			case "queue":
 				bot.printQueueStat(update.Message.Chat.ID, update.Message.CommandArguments())
 			case "rules":
@@ -230,6 +230,18 @@ func (bot *ApBot) printRules(chatID int64) {
 	bot.sendMessage(chatID, "<code>" + string(rules) + "</code>")
 }
 
+func (bot *ApBot) printHealth(chatID int64) {
+	var mes string
+	if intInSlice(chatID, bot.Chats) {
+		mes = "❤ Мониторинг активен."
+	} else {
+		mes = "⛔ Мониторинг выключен! Для запуска выполните команду /start."
+	}
+
+	mes += "\nВсегда ваш <i>ApAggregateQueuesBot версии "+version+"</i>\n-=[ 🤖 ]=-"
+	bot.sendMessage(chatID, mes)
+}
+
 func (bot *ApBot) generateAlarmMessage(mesData []QMesData) string {
 	var mes string
 
@@ -284,6 +296,15 @@ func (bot *ApBot) sendMessage(chatID int64, message string) {
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func intInSlice(a int64, list map[int64]int64) bool {
+	for _, v := range list {
+		if v == a {
 			return true
 		}
 	}
