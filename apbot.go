@@ -109,9 +109,11 @@ func (bot *ApBot) Run() {
 				bot.sendMessage(update.Message.Chat.ID, "\xF0\x9F\x92\xA4")
 			case "help":
 				help := "Доступны команды:\n" +
+					"/start - запуск мониторинга состояния очередей\n" +
+					"/stop - приостановка мониторинга состояния очередей\n" +
 					"/health - проверка бота на работоспособность\n" +
-					"/queue (queueName [queueType]) - вывод статистики по очереди queueName (<b>" + strings.Join(queueNames, ", ") + "</b>) за последнее время; queueType - если не задан, то выводится статистика по normal queue, если <b>EQ</b>, то выводится статистика по exception queue\n" +
-					"/rules - выводит правила оповещения, указанные в настройках"
+					"/queue (queueName [queueType]) - вывод статистики по очереди queueName (<b>" + strings.Join(queueNames, ", ") + "</b>) за последнее время; queueType - если не задан, то выводится статистика по normal queue, если <b>EQ</b>, то выводится статистика по exception queue\n"
+					//"/rules - выводит правила оповещения, указанные в настройках"
 				bot.sendMessage(update.Message.Chat.ID, help)
 			case "health":
 				bot.sendMessage(update.Message.Chat.ID, "Я ❤ тебя!\nВсегда ваш <i>ApAggregateQueuesBot версии "+version+"</i>\n-=[ 🤖 ]=-")
@@ -225,7 +227,7 @@ func (bot *ApBot) printQueueStat(chatID int64, queueName string) {
 
 func (bot *ApBot) printRules(chatID int64) {
 	rules, _ := json.Marshal(bot.AlarmLogic)
-	bot.sendMessage(chatID, string(rules))
+	bot.sendMessage(chatID, "<code>" + string(rules) + "</code>")
 }
 
 func (bot *ApBot) generateAlarmMessage(mesData []QMesData) string {
