@@ -7,7 +7,7 @@ import (
 
 const (
 	defConfigFileName = "config.json"
-	defPollInterval = 60 // sec
+	defPollInterval   = 60 // sec
 )
 
 type Config struct {
@@ -15,6 +15,7 @@ type Config struct {
 	Proxy         *Proxy            `json:"proxy,omitempty"`
 	ModelFileName string            `json:"modelFileName"`
 	AlarmLogic    *QueuesAlarmLogic `json:"alarmLogic,omitempty"`
+	InfoUrl       string            `json:"infoUrl,omitempty"`
 }
 
 type Proxy struct {

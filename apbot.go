@@ -16,11 +16,14 @@ import (
 	"strings"
 )
 
+const version = "1.1.0"
+
 type ApBot struct {
 	Bot        *tgbotapi.BotAPI
 	Chats      map[int64]int64
 	Model      *model.Model
 	AlarmLogic config.QueuesAlarmLogic
+	InfoUrl    string
 }
 
 type QMesData struct {
@@ -42,7 +45,7 @@ func NewApBot(conf *config.Config) *ApBot {
 	var client *http.Client
 
 	if conf == nil {
-		conf = &config.Config{TelApiToken: "585604919:AAG_wqdpDE5zg3bGJznhl0ZTVT2NqOpwyHs"}
+		conf = &config.Config{TelApiToken: "543460319:AAER5gKDmF0k3S6BNDhsm8v07iHspL8A4_M"}
 	}
 
 	if conf.Proxy != nil {
@@ -73,6 +76,7 @@ func NewApBot(conf *config.Config) *ApBot {
 	log.Printf("Authorized on account %s", bot.Bot.Self.UserName)
 
 	bot.AlarmLogic = *conf.AlarmLogic
+	bot.InfoUrl = conf.InfoUrl
 
 	return bot
 }
@@ -110,7 +114,7 @@ func (bot *ApBot) Run() {
 					"/rules - выводит правила оповещения, указанные в настройках"
 				bot.sendMessage(update.Message.Chat.ID, help)
 			case "health":
-				bot.sendMessage(update.Message.Chat.ID, "Я \xE2\x9D\xA4 тебя!")
+				bot.sendMessage(update.Message.Chat.ID, "Я ❤ тебя!\nВсегда ваш <i>ApAggregateQueuesBot версии "+version+"</i>\n-=[ 🤖 ]=-")
 			case "queue":
 				bot.printQueueStat(update.Message.Chat.ID, update.Message.CommandArguments())
 			case "rules":
@@ -132,12 +136,6 @@ func (bot *ApBot) sendBroadcastMessage(m chan string) {
 	}
 }
 
-func (bot *ApBot) sendMessage(chatID int64, message string) {
-	msg := tgbotapi.NewMessage(chatID, message)
-	msg.ParseMode = tgbotapi.ModeHTML
-	bot.Bot.Send(msg)
-}
-
 func (bot *ApBot) poll(m chan string) {
 	for {
 		m <- bot.readQueuesStatFile()
@@ -153,7 +151,7 @@ func (bot *ApBot) readQueuesStatFile() string {
 	bot.readQueueStat(mesData, bot.Model.NormalQueues, "")
 	bot.readQueueStat(mesData, bot.Model.ExceptionQueues, "Exception Queue")
 
-	return bot.generateStatMessage(*mesData)
+	return bot.generateAlarmMessage(*mesData)
 }
 
 func (bot *ApBot) readQueueStat(mesData *[]QMesData, queuesInfo map[string][]model.QueueInfo, queueType string) {
@@ -188,7 +186,49 @@ func (bot *ApBot) readQueueStat(mesData *[]QMesData, queuesInfo map[string][]mod
 	}
 }
 
-func (bot *ApBot) generateStatMessage(mesData []QMesData) string {
+func (bot *ApBot) printQueueStat(chatID int64, queueName string) {
+
+	queueType := ""
+	posQueueNames := "Варианты: <b>" + strings.Join(queueNames, ", ") + "</b>"
+
+	s := strings.Split(queueName, " ")
+	if strings.TrimSpace(queueName) == "" {
+		bot.sendMessage(chatID, "⛔ Не задано название очереди. "+posQueueNames)
+		return
+	}
+	if !stringInSlice(s[0], queueNames) {
+		bot.sendMessage(chatID, "⛔ Не знаю такой очереди! "+posQueueNames)
+		return
+	}
+	if len(s) > 1 && !stringInSlice(s[1], queueTypes) {
+		bot.sendMessage(chatID, "⛔ Не знаю такого типа очереди! Знаю только <b>EQ</b>")
+		return
+	} else {
+		if len(s) > 1 {
+			queueType = s[1]
+		}
+	}
+
+	var queues map[string][]model.QueueInfo
+	if queueType == "" {
+		queues = bot.Model.NormalQueues
+	} else {
+		queues = bot.Model.ExceptionQueues
+	}
+	for name, queue := range queues {
+		if name != s[0] {
+			continue
+		}
+		bot.sendMessage(chatID, bot.generateStatMessage(queue))
+	}
+}
+
+func (bot *ApBot) printRules(chatID int64) {
+	rules, _ := json.Marshal(bot.AlarmLogic)
+	bot.sendMessage(chatID, string(rules))
+}
+
+func (bot *ApBot) generateAlarmMessage(mesData []QMesData) string {
 	var mes string
 
 	for _, m := range mesData {
@@ -208,27 +248,35 @@ func (bot *ApBot) generateStatMessage(mesData []QMesData) string {
 	return mes
 }
 
-func (bot *ApBot) printQueueStat(chatID int64, queueName string) {
-	s := strings.Split(queueName, " ")
-	if len(s) < 1 {
-		bot.sendMessage(chatID, "Укажи название очереди. Варианты: <b>" + strings.Join(queueNames, ", ") + "</b>")
-		return
-	}
-	if !stringInSlice(s[0], queueNames) {
-		bot.sendMessage(chatID, "Не знаю такой очереди! Только <b>" + strings.Join(queueNames, ", ") + "</b>")
-		return
-	}
-	if len(s) > 1 && !stringInSlice(s[1], queueTypes)  {
-		bot.sendMessage(chatID, "Не знаю такого типа очереди! Знаю только <b>EQ</b>")
-		return
-	}
+func (bot *ApBot) generateStatMessage(queueInfo []model.QueueInfo) string {
 
+	mes := "📈 " +
+		"Полная информация по ссылке " +
+		"<a href=\"" +
+		bot.InfoUrl +
+		"\">" +
+		bot.InfoUrl +
+		"</a>\n<code>"
 
+	for i, statInfo := range queueInfo {
+		if i > 11 {
+			break
+		}
+		mes += statInfo.DateTime.Format("2006-01-02 15:04") +
+			"     " +
+			strconv.Itoa(*statInfo.Length) +
+			"\n"
+
+	}
+	mes += "</code>"
+
+	return mes
 }
 
-func (bot *ApBot) printRules(chatID int64) {
-	rules, _ := json.Marshal(bot.AlarmLogic)
-	bot.sendMessage(chatID, string(rules))
+func (bot *ApBot) sendMessage(chatID int64, message string) {
+	msg := tgbotapi.NewMessage(chatID, message)
+	msg.ParseMode = tgbotapi.ModeHTML
+	bot.Bot.Send(msg)
 }
 
 func stringInSlice(a string, list []string) bool {
